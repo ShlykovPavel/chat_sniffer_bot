@@ -15,13 +15,25 @@ class Database:
         self.cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            chat_id INTEGER NOT NULL,
+            chat_id INTEGER NOT NULL UNIQUE,
             username TEXT NOT NULL,
         )''')
         self.conn.commit()
 
+    def create_channels_table(self):
+        self.cursor.execute('''
+        CREATE TABLE IF NOT EXISTS channels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            FOREIGN KEY (chat_id) REFERENCES users (chat_id),
+            FOREIGN KEY (username) REFERENCES users (username),
+            channel_name TEXT NOT NULL
+        )''')
+        self.conn.commit()
 
     # Метод для закрытия соединения
     def close_connection(self):
         self.conn.close()
 
+
+class DatabaseExeption(Exception):
+    pass
