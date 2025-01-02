@@ -5,6 +5,7 @@ from telebot import types
 from channels.channels_functions import Channels_functions
 from db.database import Database
 from users.users_functions import users_functions
+from pagination import *
 
 # Настройка логирования
 logging.basicConfig(
@@ -27,10 +28,9 @@ class Bot_commands:
         @self.bot.message_handler(commands=['start'])
         def start_registration(message):
             chat_id = message.chat.id
-            username = message.from_user.username  # Telegram username
+            username = message.from_user.username
             if self.user_functions.check_users(chat_id):
                 self.bot.send_message(chat_id, "Вы уже зарегистрированы.")
-                return
             else:
                 self.user_functions.start_registration(chat_id, username)
 
@@ -69,22 +69,16 @@ class Bot_commands:
             if not channels:
                 self.bot.send_message(chat_id, "Нет чатов/каналов для мониторинга.")
                 return
-            send_paginated_channels(chat_id, channels, 0)  # Начинаем с 0-й страницы
 
-        def send_paginated_channels(chat_id, channels, page):
-            items_per_page = 10
-            total_pages = (len(channels) - 1) // items_per_page + 1
+            page = 0
+            page_channels, total_pages = get_paginated_channels(channels, page)
 
-            # Получаем элементы для текущей страницы
-            start_index = page * items_per_page
-            end_index = start_index + items_per_page
-            page_channels = channels[start_index:end_index]
-
-            # Создаем Inline клавиатуру
             markup = types.InlineKeyboardMarkup()
 
             for channel in page_channels:
-                button = types.InlineKeyboardButton(channel, callback_data=f"remove_channel:{channel}")
+                # Преобразуем channel в строку
+                channel_name = channel[0]
+                button = types.InlineKeyboardButton(channel_name, callback_data=f"remove_channel:{channel_name}")
                 markup.add(button)
 
             # Добавляем кнопки "Назад" и "Вперед"
@@ -103,31 +97,22 @@ class Bot_commands:
         @self.bot.callback_query_handler(func=lambda call: call.data.startswith('channels_page:'))
         def handle_channels_pagination(call):
             chat_id = call.message.chat.id
-            page = int(call.data.split(':')[1])
+            page = int(call.data.split(':')[1])  # Извлекаем номер страницы из callback_data
             channels = self.channels_functions.get_channels(chat_id)
 
-            # Обновляем сообщение с новой страницей
-            self.bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=call.message.message_id,
-                text=f"Страница {page + 1} из {(len(channels) - 1) // 10 + 1}:",
-                reply_markup=create_paginated_markup(channels, page)
-            )
+            # Получаем данные для указанной страницы
+            page_channels, total_pages = get_paginated_channels(channels, page)
 
-        def create_paginated_markup(channels, page):
-            items_per_page = 10
-            total_pages = (len(channels) - 1) // items_per_page + 1
-
-            start_index = page * items_per_page
-            end_index = start_index + items_per_page
-            page_channels = channels[start_index:end_index]
-
+            # Создаем клавиатуру для указанной страницы
             markup = types.InlineKeyboardMarkup()
 
             for channel in page_channels:
-                button = types.InlineKeyboardButton(channel, callback_data=f"remove_channel:{channel}")
+                # Преобразуем channel в строку
+                channel_name = channel[0]
+                button = types.InlineKeyboardButton(channel_name, callback_data=f"remove_channel:{channel_name}")
                 markup.add(button)
 
+            # Добавляем кнопки "Назад" и "Вперед"
             navigation_row = []
             if page > 0:
                 navigation_row.append(types.InlineKeyboardButton("⬅ Назад", callback_data=f"channels_page:{page - 1}"))
@@ -137,11 +122,21 @@ class Bot_commands:
             if navigation_row:
                 markup.row(*navigation_row)
 
-            return markup
+            # Обновляем сообщение с новой страницей
+            self.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=call.message.message_id,
+                text=f"Страница {page + 1} из {total_pages}:",
+                reply_markup=markup
+            )
 
         @self.bot.message_handler(commands=['add_channel'])
         def add_channel(message):
             chat_id = message.chat.id
-            self.bot.send_message(chat_id, "Введите username канала:")
-            self.bot.register_next_step_handler(message, lambda msg: self.channels_functions.add_channel(chat_id, msg))
+            try:
+                self.bot.send_message(chat_id, "Введите username канала:")
+                self.bot.register_next_step_handler(message, lambda msg: self.channels_functions.add_channel(chat_id, msg.text))
+            except Exception as e:
+                logging.error(f"Ошибка при добавлении канала: {e}")
+                self.bot.send_message(chat_id, f"Произошла ошибка при добавлении канала: {e}")
 

@@ -20,7 +20,8 @@ class users_functions():
 
     def check_users(self, chat_id):
         try:
-            self.db.check_users(chat_id)
+            a = self.db.check_users(chat_id)
+            return a
         except Exception as e:
             logging.error(f"Ошибка при проверке наличия пользователя: {e}")
             raise Exception(f"Произошла ошибка при проверке наличия пользователя: {e}")

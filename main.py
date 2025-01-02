@@ -11,7 +11,7 @@ bot_api = os.getenv('Bot_api')
 bot = telebot.TeleBot(bot_api)
 
 # Создание подключения к базе данных
-conn = sqlite3.connect('parking.db', check_same_thread=False)
+conn = sqlite3.connect('users.db', check_same_thread=False)
 db_cursor = conn.cursor()
 
 user_data = {}

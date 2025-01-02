@@ -11,7 +11,8 @@ class Channels_functions():
 
     def get_channels(self, chat_id):
         try:
-            self.db.check_channels(chat_id)
+            a = self.db.check_channels(chat_id)
+            return a
         except Exception as e:
             logging.error(f"Ошибка при проверке наличия пользователя: {e}")
             raise Exception(f"Произошла ошибка при проверке наличия пользователя: {e}")
@@ -20,6 +21,7 @@ class Channels_functions():
     def add_channel(self, chat_id, channel_name):
         try:
             self.db.add_channel(chat_id, channel_name)
+            self.bot.send_message(chat_id, "Канал добавлен в список чатов/каналов для мониторинга.")
         except Exception as e:
             logging.error(f"Ошибка при добавлении канала: {e}")
             raise Exception(f"Произошла ошибка при добавлении канала: {e}")

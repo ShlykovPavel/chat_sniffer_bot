@@ -4,12 +4,13 @@ from db.database import Database, DatabaseExeption
 
 
 class db_channels_functions(Database):
-    super().__init__()
+    def __init__(self):
+        super().__init__()
 
     def check_channels(self, chat_id):
         try:
-            self.cursor.execute("SELECT * FROM channels WHERE chat_id = ?", (chat_id,))
-            return self.cursor.fetchall() is not None
+            self.cursor.execute("SELECT channel_name FROM channels WHERE chat_id = ?", (chat_id,))
+            return self.cursor.fetchall()
         except Exception as e:
             logging.error(f"Ошибка при проверке наличия канала: {e}")
             raise DatabaseExeption(f"Произошла ошибка при проверке наличия канала: {e}")
